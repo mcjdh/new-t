@@ -6,63 +6,92 @@ def binary_search_strategy(min_val, max_val, feedback=None):
     Implements binary search strategy for the number guessing game.
     Returns the next guess based on previous feedback.
     """
+    # Store min and max values as static variables if this is the first call
+    if not hasattr(binary_search_strategy, 'current_min'):
+        binary_search_strategy.current_min = min_val
+        binary_search_strategy.current_max = max_val
+    
     if feedback is None:  # First guess
-        return (min_val + max_val) // 2
+        # Reset the range for a new game
+        binary_search_strategy.current_min = min_val
+        binary_search_strategy.current_max = max_val
+        return (binary_search_strategy.current_min + binary_search_strategy.current_max) // 2
     
     guess, result = feedback
     if result == "low":
-        min_val = guess + 1
+        binary_search_strategy.current_min = guess + 1
     elif result == "high":
-        max_val = guess - 1
+        binary_search_strategy.current_max = guess - 1
     
-    return (min_val + max_val) // 2
+    return (binary_search_strategy.current_min + binary_search_strategy.current_max) // 2
 
 def linear_search_strategy(min_val, max_val, feedback=None):
     """
     Implements linear search strategy for the number guessing game.
     Simply starts at min_val and increments by 1.
     """
+    # Initialize current value if this is the first run
+    if not hasattr(linear_search_strategy, 'current'):
+        linear_search_strategy.current = min_val
+    
     if feedback is None:  # First guess
-        return min_val
+        # Reset for a new game
+        linear_search_strategy.current = min_val
+        return linear_search_strategy.current
     
     guess, result = feedback
     if result == "low":
-        return guess + 1
-    elif result == "high":
-        # If we're too high, something went wrong with linear search
-        # Just go back to the minimum as a fallback
-        return min_val
+        linear_search_strategy.current = guess + 1
+    # If too high, we stick with our current value (shouldn't happen in proper linear search)
     
-    return guess  # Should never reach here
+    return linear_search_strategy.current
 
 def random_search_strategy(min_val, max_val, feedback=None):
     """
     Implements random search strategy for the number guessing game.
     Makes random guesses, avoiding previously guessed numbers.
     """
+    # Initialize static variables if first run
+    if not hasattr(random_search_strategy, 'tried_values'):
+        random_search_strategy.tried_values = set()
+        random_search_strategy.current_min = min_val
+        random_search_strategy.current_max = max_val
+    
     if feedback is None:  # First guess
-        return random.randint(min_val, max_val)
+        # Reset for a new game
+        random_search_strategy.tried_values = set()
+        random_search_strategy.current_min = min_val
+        random_search_strategy.current_max = max_val
+        guess = random.randint(min_val, max_val)
+        random_search_strategy.tried_values.add(guess)
+        return guess
     
     guess, result = feedback
-    tried_values = getattr(random_search_strategy, 'tried_values', set())
-    tried_values.add(guess)
-    random_search_strategy.tried_values = tried_values
-    
+    # Update our range based on feedback
     if result == "low":
-        min_val = guess + 1
+        random_search_strategy.current_min = guess + 1
     elif result == "high":
-        max_val = guess - 1
+        random_search_strategy.current_max = guess - 1
     
     # Find an untried value in the range
-    valid_options = [n for n in range(min_val, max_val + 1) 
+    valid_options = [n for n in range(random_search_strategy.current_min, 
+                                     random_search_strategy.current_max + 1) 
                    if n not in random_search_strategy.tried_values]
     
     if not valid_options:
-        # If we've somehow tried all values or have an invalid range
+        # If we've somehow tried all values or have an invalid range, reset
         random_search_strategy.tried_values = set()
-        return min_val
+        if random_search_strategy.current_min <= random_search_strategy.current_max:
+            guess = random.randint(random_search_strategy.current_min, 
+                                 random_search_strategy.current_max)
+        else:
+            # Fallback if min > max (shouldn't happen)
+            guess = min_val
+    else:
+        guess = random.choice(valid_options)
     
-    return random.choice(valid_options)
+    random_search_strategy.tried_values.add(guess)
+    return guess
 
 def manual_strategy(min_val, max_val, feedback=None):
     """
@@ -99,9 +128,6 @@ def play_number_guessing_game(strategy_func=manual_strategy, min_val=1, max_val=
     Returns:
         dict: Statistics about the game (attempts, success, etc.)
     """
-    if strategy_func == random_search_strategy:
-        random_search_strategy.tried_values = set()
-        
     secret_number = random.randint(min_val, max_val)
     attempts = 0
     feedback = None
